@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ category_name }} Problems · LeetCode Explorer{% endblock %}
+
+{% block extra_css %}
+<style>
+    .problems-table {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #e2e8f0;
+    }
+
+    .problems-table table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: 'DM Sans', sans-serif;
+    }
+
+    .problems-table th {
+        background: #f8f9fb;
+        padding: 16px;
+        text-align: left;
+        font-weight: 600;
+        color: #1e293b;
+        border-bottom: 1px solid #e2e8f0;
+        font-family: 'Montserrat', sans-serif;
+    }
+
+    .problems-table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid #e2e8f0;
+        color: #475569;
+    }
+
+    .problems-table tr:hover {
+        background-color: #f8f9fb;
+    }
+
+    .problems-table a {
+        color: #2563eb;
+        font-weight: 500;
+        transition: color 0.2s;
+    }
+
+    .problems-table a:hover {
+        color: #1d4ed8;
+        text-decoration: underline;
+    }
+
+    .difficulty {
+        font-weight: 600;
+        padding: 4px 12px;
+        border-radius: 6px;
+        display: inline-block;
+        font-size: 0.85rem;
+    }
+
+    .difficulty.easy {
+        color: #00a383;
+        background: #e6f7f2;
+    }
+
+    .difficulty.medium {
+        color: #d4a017;
+        background: #fff8e6;
+    }
+
+    .difficulty.hard {
+        color: #e53935;
+        background: #ffebee;
+    }
+
+    .error {
+        background: #fff5f5;
+        color: #c53030;
+        padding: 16px;
+        border-radius: 10px;
+        border-left: 4px solid #c53030;
+    }
+
+    .header-section {
+        margin-bottom: 2rem;
+    }
+
+    .header-section h1 {
+        margin-bottom: 0.5rem;
+    }
+
+    .header-section .text-muted {
+        font-size: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% else %}
+        <div class="header-section">
+            <h1>{{ category_name }} Problems</h1>
+            <p class="text-muted">Total problems: <strong>{{ total }}</strong></p>
+        </div>
+
+        <div class="problems-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 10%;">#</th>
+                        <th style="width: 60%;">Title</th>
+                        <th style="width: 20%;">Difficulty</th>
+                        <th style="width: 10%;">AC Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for problem in problems %}
+                    <tr>
+                        <td>{{ problem.questionFrontendId }}</td>
+                        <td>
+                            <a href="{% url 'problem_detail' problem.titleSlug %}">
+                                {{ problem.title }}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="difficulty {{ problem.difficulty|lower }}">
+                                {{ problem.difficulty }}
+                            </span>
+                        </td>
+                        <td>{{ problem.acRate }}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 32px;">
+                            No problems found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+{% endblock %}

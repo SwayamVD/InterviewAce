@@ -1,0 +1,255 @@
+
+{% extends 'base.html' %}
+
+{% block title %}Home · LeetCode Explorer{% endblock %}
+
+{% block content %}
+<style>
+    .explorer {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 12px 16px 24px;
+        color: #1f2937;
+    }
+
+    .explorer-header {
+        margin-bottom: 22px;
+    }
+
+    .explorer-header h1 {
+        font-size: 25px;
+        font-weight: 650;
+        letter-spacing: -0.6px;
+        margin: 0 0 5px;
+    }
+
+    .explorer-header p {
+        margin: 0;
+        font-size: 13px;
+        color: #6b7280;
+    }
+
+    .search-box {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: #fff;
+        border: 1px solid #dfe3e8;
+        border-radius: 7px;
+        padding: 0 12px;
+        height: 40px;
+        margin-bottom: 24px;
+        transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .search-box:focus-within {
+        border-color: #64748b;
+        box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.10);
+    }
+
+    .search-box svg {
+        width: 17px;
+        height: 17px;
+        color: #9ca3af;
+        flex-shrink: 0;
+    }
+
+    .search-box input {
+        width: 100%;
+        border: none;
+        outline: none;
+        background: transparent;
+        color: #1f2937;
+        font-size: 13px;
+    }
+
+    .search-box input::placeholder {
+        color: #9ca3af;
+    }
+
+    .section-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 11px;
+    }
+
+    .section-heading h2 {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .section-heading span {
+        font-size: 12px;
+        color: #9ca3af;
+    }
+
+    .category-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .category-card {
+        display: block;
+        min-width: 0;
+        padding: 15px 16px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 7px;
+        text-decoration: none;
+        color: inherit;
+        transition: border-color 0.15s, background 0.15s;
+    }
+
+    .category-card:hover {
+        border-color: #9ca3af;
+        background: #fafafa;
+    }
+
+    .category-card h3 {
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.4;
+        margin: 0 0 4px;
+    }
+
+    .category-card p {
+        font-size: 12px;
+        line-height: 1.5;
+        color: #6b7280;
+        margin: 0;
+    }
+
+    .category-card.hidden {
+        display: none;
+    }
+
+    .empty-state {
+        display: none;
+        padding: 24px 12px;
+        text-align: center;
+        font-size: 13px;
+        color: #6b7280;
+        border: 1px dashed #d1d5db;
+        border-radius: 7px;
+    }
+
+    @media (max-width: 700px) {
+        .category-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .explorer {
+            padding: 8px 12px 20px;
+        }
+    }
+
+    @media (max-width: 420px) {
+        .category-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .explorer-header h1 {
+            font-size: 22px;
+        }
+    }
+</style>
+
+<div class="explorer">
+    <header class="explorer-header">
+        <h1>Problem Explorer</h1>
+        <p>Browse coding problems by topic and practice efficiently.</p>
+    </header>
+
+    <label class="search-box" for="category-search">
+        <svg viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="m16 16 4 4"></path>
+        </svg>
+        <input
+            type="search"
+            id="category-search"
+            placeholder="Search categories..."
+            autocomplete="off"
+        >
+    </label>
+
+    <div class="section-heading">
+        <h2>Popular Categories</h2>
+        <span id="category-count">6 categories</span>
+    </div>
+
+    <div class="category-grid" id="category-grid">
+        <a class="category-card"
+           href="{% url 'category_list' 'array' %}">
+            <h3>Array</h3>
+            <p>Array manipulation and traversal</p>
+        </a>
+
+        <a class="category-card"
+           href="{% url 'category_list' 'string' %}">
+            <h3>String</h3>
+            <p>String processing and patterns</p>
+        </a>
+
+        <a class="category-card"
+           href="{% url 'category_list' 'dynamic-programming' %}">
+            <h3>Dynamic Programming</h3>
+            <p>Optimization and subproblems</p>
+        </a>
+
+        <a class="category-card"
+           href="{% url 'category_list' 'heap' %}">
+            <h3>Heap</h3>
+            <p>Priority queues and ordering</p>
+        </a>
+
+        <a class="category-card"
+           href="{% url 'category_list' 'graph' %}">
+            <h3>Graph</h3>
+            <p>BFS, DFS and shortest paths</p>
+        </a>
+
+        <a class="category-card"
+           href="{% url 'category_list' 'binary-search' %}">
+            <h3>Binary Search</h3>
+            <p>Efficient searching techniques</p>
+        </a>
+    </div>
+
+    <div class="empty-state" id="empty-state">
+        No matching categories found.
+    </div>
+</div>
+
+<script>
+    const searchInput = document.getElementById('category-search');
+    const cards = document.querySelectorAll('.category-card');
+    const count = document.getElementById('category-count');
+    const emptyState = document.getElementById('empty-state');
+
+    searchInput.addEventListener('input', function () {
+        const query = this.value.trim().toLowerCase();
+        let visible = 0;
+
+        cards.forEach(function (card) {
+            const matches = card.textContent.toLowerCase().includes(query);
+
+            card.classList.toggle('hidden', !matches);
+
+            if (matches) visible++;
+        });
+
+        count.textContent = visible + (visible === 1
+            ? ' category'
+            : ' categories');
+
+        emptyState.style.display = visible === 0 ? 'block' : 'none';
+    });
+</script>
+{% endblock %}
+```

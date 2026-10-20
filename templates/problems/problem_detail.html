@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ problem.title }} · LeetCode Explorer{% endblock %}
+
+{% block extra_css %}
+<style>
+    .problem-header {
+        margin-bottom: 2rem;
+    }
+
+    .problem-title {
+        font-size: 2rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .problem-meta {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 0.95rem;
+        color: #64748b;
+    }
+
+    .difficulty {
+        font-weight: 600;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        display: inline-block;
+    }
+
+    .difficulty.easy {
+        background: #e6f7f2;
+        color: #00a383;
+    }
+
+    .difficulty.medium {
+        background: #fff8e6;
+        color: #d4a017;
+    }
+
+    .difficulty.hard {
+        background: #ffebee;
+        color: #e53935;
+    }
+
+    .problem-content {
+        background: white;
+        border-radius: 10px;
+        padding: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #e2e8f0;
+        margin-bottom: 2rem;
+        line-height: 1.8;
+    }
+
+    .problem-content h2, .problem-content h3 {
+        font-family: 'Montserrat', sans-serif;
+        margin: 1.5rem 0 0.75rem 0;
+        font-weight: 600;
+    }
+
+    .problem-content p {
+        margin-bottom: 1rem;
+        color: #334155;
+    }
+
+    .problem-content ul, .problem-content ol {
+        margin-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .problem-content li {
+        margin-bottom: 0.5rem;
+    }
+
+    .problem-content pre, .problem-content code {
+        font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+        background: #f5f5f5;
+        border-radius: 6px;
+    }
+
+    .problem-content pre {
+        padding: 1rem;
+        overflow-x: auto;
+        margin: 1rem 0;
+        font-size: 0.9rem;
+    }
+
+    .problem-content code {
+        padding: 2px 6px;
+        font-size: 0.88rem;
+    }
+
+    /* Code Snippets */
+    .snippets {
+        background: white;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        margin-bottom: 2rem;
+    }
+
+    .snippet-tabs {
+        display: flex;
+        background: #f8f9fb;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .tab {
+        padding: 12px 20px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        color: #64748b;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+        font-family: 'DM Sans', sans-serif;
+    }
+
+    .tab:hover {
+        color: #1e293b;
+    }
+
+    .tab.active {
+        color: #2563eb;
+        border-bottom-color: #2563eb;
+        background: white;
+    }
+
+    .snippet-content {
+        display: none;
+    }
+
+    .snippet-content.active {
+        display: block;
+    }
+
+    .snippet-content pre {
+        margin: 0;
+        padding: 1.5rem;
+        background: #fafafa;
+        font-size: 0.88rem;
+        line-height: 1.5;
+        overflow-x: auto;
+        border-radius: 0;
+    }
+
+    .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 2rem;
+    }
+
+    .tag {
+        background: #f0f0f0;
+        color: #555;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        font-family: 'DM Sans', sans-serif;
+    }
+
+    .error {
+        background: #fff5f5;
+        color: #c53030;
+        padding: 1.5rem;
+        border-radius: 10px;
+        text-align: center;
+        border-left: 4px solid #c53030;
+    }
+
+    .back-link {
+        display: inline-block;
+        margin-bottom: 1.5rem;
+        color: #2563eb;
+        font-weight: 500;
+        transition: color 0.2s;
+    }
+
+    .back-link:hover {
+        color: #1d4ed8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <a href="javascript:history.back()" class="back-link">← Back</a>
+
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% else %}
+
+        <div class="problem-header">
+            <h1 class="problem-title">
+                {{ problem.questionFrontendId }}. {{ problem.title }}
+            </h1>
+            <form method="POST", action="{% url 'solve_problem' %}">
+                {% csrf_token %}
+                <input type="hidden" name="title_slug" value="{{ problem.titleSlug }}">
+                <input type="hidden" name="title" value="{{ problem.title }}">
+                <input type="hidden" name="code_snippets" value="{{ problem.codeSnippets }}">
+                <input type="hidden" name="content" value="{{ problem.content }}">
+                <button type="submit">Code Editor</button>
+            </form>
+            <div class="problem-meta">
+                <span class="difficulty {{ problem.difficulty|lower }}">
+                    {{ problem.difficulty }}
+                </span>
+                <span>👍 {{ problem.likes }}</span>
+                <span>👎 {{ problem.dislikes }}</span>
+                <span>AC Rate: {{ problem.acRate }}%</span>
+            </div>
+        </div>
+
+        <!-- Problem Description -->
+        <div class="problem-content">
+            {{ problem.content|safe }}
+        </div>
+
+        <!-- Code Snippets (only Java, Python, C++) -->
+        {% if problem.codeSnippets %}
+        <div class="snippets">
+            <div class="snippet-tabs">
+                {% for snippet in problem.codeSnippets %}
+                    {% if snippet.langSlug == "java" or snippet.langSlug == "python3" or snippet.langSlug == "cpp" %}
+                        <div class="tab {% if forloop.first %}active{% endif %}"
+                             onclick="showSnippet(event, '{{ snippet.langSlug }}')">
+                            {% if snippet.langSlug == "python3" %}Python
+                            {% elif snippet.langSlug == "cpp" %}C++
+                            {% else %}{{ snippet.lang }}{% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            {% for snippet in problem.codeSnippets %}
+                {% if snippet.langSlug == "java" or snippet.langSlug == "python3" or snippet.langSlug == "cpp" %}
+                    <div class="snippet-content {% if forloop.first %}active{% endif %}"
+                         id="snippet-{{ snippet.langSlug }}">
+                        <pre><code>{{ snippet.code }}</code></pre>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Tags -->
+        {% if problem.topicTags %}
+        <div class="tags">
+            {% for tag in problem.topicTags %}
+                <span class="tag">{{ tag.name }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+    {% endif %}
+
+    <script>
+        function showSnippet(event, lang) {
+            // Hide all
+            document.querySelectorAll('.snippet-content').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            // Show selected
+            document.getElementById('snippet-' + lang).classList.add('active');
+            event.target.classList.add('active');
+        }
+    </script>
+{% endblock %}

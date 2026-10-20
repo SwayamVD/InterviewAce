@@ -1,0 +1,32 @@
+interview_ace/
+│
+├── core/                     # Project configuration directory (renamed from interview_ace)
+│   ├── __init__.py
+│   ├── settings.py           # Base configuration
+│   ├── urls.py               # Main routing config
+│   └── wsgi.py / asgi.py     # Server gateways
+│
+├── apps/                     # Holds all local feature-based Django apps
+│   ├── __init__.py
+│   │
+│   ├── practice/             # Coding practice & LeetCode module
+│   │   ├── migrations/
+│   │   ├── __init__.py
+│   │   ├── models.py         # Track user progress, submissions, etc.
+│   │   ├── views.py          # API endpoints for questions and history
+│   │   ├── urls.py
+│   │   └── services.py       # LeetCode GraphQL API fetching logic
+│   │
+│   └── feedback/             # AI Code Feedback module
+│       ├── migrations/
+│       ├── __init__.py
+│       ├── models.py         # Save historical LLM reviews & feedback scores
+│       ├── views.py          # Trigger code evaluation
+│       ├── urls.py
+│       └── services.py       # Local LLM client connection and prompt engineering
+│
+├── templates/                # Global HTML templates (if using Django templates)
+├── static/                   # Global CSS, JS, and image assets
+├── manage.py
+├── requirements.txt          # Project dependencies
+└── .env                      # Local environment secrets (API keys, LLM endpoints)

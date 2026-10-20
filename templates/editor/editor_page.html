@@ -1,0 +1,474 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title|default:"Code Editor" }}{% endblock %}
+
+{% block content %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+
+<style>
+    .workspace {
+        --nav-height: 0px;          /* set to your navbar height if base.html has one */
+        --bg: #f7f8fa;
+        --surface: #ffffff;
+        --border: #dfe3e8;
+        --text: #1f2933;
+        --muted: #616e7c;
+        --accent: #1e3a5f;
+        --accent-hover: #152b47;
+        --danger: #b42318;
+        --success: #067647;
+
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - var(--nav-height));
+        background: var(--bg);
+        color: var(--text);
+        font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+        font-size: 15px;
+        line-height: 1.6;
+    }
+
+    .pane {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+        background: var(--surface);
+    }
+
+    .pane-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 14px 24px;
+        border-bottom: 1px solid var(--border);
+        min-height: 57px;
+    }
+    .pane-header h1 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+    }
+    .pane-header h2 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    .pane-header .slug {
+        margin: 2px 0 0;
+        font-family: "IBM Plex Mono", ui-monospace, monospace;
+        font-size: 12px;
+        color: var(--muted);
+    }
+
+    /* ---------- Bottom: problem ---------- */
+    .problem-pane {
+        flex: 0 0 38%;
+        border-top: 1px solid var(--border);
+    }
+    .problem-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px 24px;
+    }
+    .problem-content > * { max-width: 100ch; }
+    .problem-content p { margin: 0 0 14px; }
+    .problem-content strong { font-weight: 600; }
+    .problem-content ul, .problem-content ol { padding-left: 22px; margin: 0 0 14px; }
+    .problem-content li { margin-bottom: 4px; }
+    .problem-content img { max-width: 100%; height: auto; }
+    .problem-content code {
+        font-family: "IBM Plex Mono", ui-monospace, monospace;
+        font-size: 13px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        padding: 1px 5px;
+    }
+    .problem-content pre {
+        margin: 0 0 16px;
+        padding: 12px 16px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--accent);
+        border-radius: 3px;
+        overflow-x: auto;
+        font-family: "IBM Plex Mono", ui-monospace, monospace;
+        font-size: 13px;
+        line-height: 1.55;
+        white-space: pre-wrap;
+    }
+    .problem-content pre code { background: none; border: 0; padding: 0; }
+
+    .error {
+        margin: 24px;
+        padding: 12px 16px;
+        border: 1px solid #f1b5af;
+        border-left: 3px solid var(--danger);
+        background: #fef3f2;
+        color: var(--danger);
+        border-radius: 3px;
+    }
+
+    /* ---------- Top: editor + output ---------- */
+    .bottom {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+    .bottom > .pane + .pane { border-left: 1px solid var(--border); }
+
+    .toolbar-controls { display: flex; align-items: center; gap: 10px; }
+
+    .select {
+        font: inherit;
+        font-size: 14px;
+        padding: 7px 32px 7px 12px;
+        color: var(--text);
+        background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%23616e7c' stroke-width='1.5'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E") no-repeat right 12px center;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        appearance: none;
+        cursor: pointer;
+    }
+
+    .btn {
+        font: inherit;
+        font-size: 14px;
+        font-weight: 500;
+        padding: 7px 18px;
+        border-radius: 4px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: background-color 0.15s ease, border-color 0.15s ease;
+    }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
+    .btn-secondary:hover:not(:disabled) { background: var(--bg); }
+    .btn-small { padding: 4px 12px; font-size: 13px; }
+
+    .select:focus-visible,
+    .btn:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+    }
+
+    .editor-body { flex: 1; min-height: 0; position: relative; }
+    .editor-body .CodeMirror {
+        position: absolute;
+        inset: 0;
+        height: 100%;
+        font-family: "IBM Plex Mono", ui-monospace, monospace;
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--text);
+        background: var(--surface);
+    }
+    .editor-body .CodeMirror-gutters { background: var(--bg); border-right: 1px solid var(--border); }
+    .editor-body .CodeMirror-linenumber { color: #9aa5b1; }
+    .editor-body .CodeMirror-cursor { border-left-color: var(--accent); }
+    .editor-body .CodeMirror-selected { background: #dbe6f3; }
+    .editor-body .CodeMirror-activeline-background { background: #f3f6fa; }
+    .cm-s-default .cm-keyword { color: #1e3a5f; font-weight: 500; }
+    .cm-s-default .cm-def, .cm-s-default .cm-variable-2 { color: #1f2933; }
+    .cm-s-default .cm-string { color: #0b6e4f; }
+    .cm-s-default .cm-number { color: #9a4d00; }
+    .cm-s-default .cm-comment { color: #7b8794; font-style: italic; }
+    .cm-s-default .cm-builtin, .cm-s-default .cm-type { color: #5b3f8c; }
+
+    .editor-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px 24px;
+        border-top: 1px solid var(--border);
+        min-height: 57px;
+    }
+    .actions { display: flex; gap: 10px; }
+    .status { font-size: 14px; color: var(--muted); }
+    .status.is-error { color: var(--danger); }
+    .status.is-success { color: var(--success); }
+
+    /* ---------- Output ---------- */
+    .output-body {
+        flex: 1;
+        min-height: 0;
+        margin: 0;
+        padding: 16px 24px;
+        overflow: auto;
+        background: var(--bg);
+        font-family: "IBM Plex Mono", ui-monospace, monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    .output-body.is-empty { color: var(--muted); font-family: inherit; font-size: 14px; }
+    .output-body.is-error { color: var(--danger); }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 900px) {
+        .workspace { height: auto; }
+        .problem-pane { flex: none; }
+        .problem-content { max-height: 50vh; }
+        .bottom { grid-template-columns: 1fr; }
+        .bottom > .pane + .pane { border-left: 0; border-top: 1px solid var(--border); }
+        .editor-body { height: 55vh; flex: none; }
+        .output-body { min-height: 200px; }
+    }
+</style>
+
+<div class="workspace">
+    <div class="bottom">
+        <!-- Top left: editor -->
+        <section class="pane" aria-label="Code editor">
+            <header class="pane-header">
+                <label class="toolbar-controls">
+                    <span class="slug" style="margin:0">Language</span>
+                    <select id="lang-select" class="select" aria-label="Programming language"></select>
+                </label>
+                <button type="button" id="reset-btn" class="btn btn-secondary">Reset code</button>
+            </header>
+
+            <div class="editor-body">
+                <textarea id="code-editor" aria-label="Code editor"></textarea>
+            </div>
+
+            <footer class="editor-footer">
+                <span id="status" class="status" role="status" aria-live="polite"></span>
+                <div class="actions">
+                    <button type="button" id="evaluate-btn" class="btn btn-secondary">Evaluate</button>
+                    <button type="button" id="submit-btn" class="btn btn-primary">Submit</button>
+                </div>
+            </footer>
+        </section>
+
+        <!-- Top right: output -->
+        <section class="pane" aria-label="Output">
+            <header class="pane-header">
+                <h2>Output</h2>
+                <button type="button" id="clear-btn" class="btn btn-secondary btn-small">Clear</button>
+            </header>
+            <pre id="output" class="output-body is-empty" aria-live="polite">Evaluate your code to see the output here.</pre>
+        </section>
+    </div>
+
+    <!-- Bottom: problem -->
+    <section class="pane problem-pane" aria-label="Problem description">
+        {% if error %}
+            <div class="error" role="alert">{{ error }}</div>
+        {% else %}
+            <header class="pane-header">
+                <div>
+                    <h1>{{ title }}</h1>
+                    <p class="slug">{{ title_slug }}</p>
+                </div>
+            </header>
+            <div class="problem-content">
+                {{ content|safe }}
+            </div>
+        {% endif %}
+    </section>
+</div>
+
+{% csrf_token %}
+<form id="eval-form" method="POST" action="../evaluate/" style="display:none">
+    {% csrf_token %}
+    <input type="hidden" name="title">
+    <input type="hidden" name="content">
+    <input type="hidden" name="lang">
+    <input type="hidden" name="code">
+</form>
+<form id="exec-form" method="POST" action="../execute/" style="display:none">
+    {% csrf_token %}
+    <input type="hidden" name="lang">
+    <input type="hidden" name="code">
+</form>
+{{ code_snippets|json_script:"snippets-data" }}
+{{ content|json_script:"problem-content-data" }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+
+<script>
+(function () {
+    const SUBMIT_URL = "../execute_code/";   
+    const EVALUATE_URL = "../evaluate/";   // used by the Evaluate button
+    const TITLE = "{{ title }}";
+const CONTENT = JSON.parse(document.getElementById("problem-content-data").textContent);
+
+    const MODES = {
+        cpp: "text/x-c++src",
+        java: "text/x-java",
+        python3: "python",
+        javascript: "javascript"
+    };
+
+    const snippets = JSON.parse(document.getElementById("snippets-data").textContent) || [];
+    const originals = {};   // pristine starter code per language
+    const drafts = {};      // user edits per language
+
+    const langSelect = document.getElementById("lang-select");
+    const statusEl = document.getElementById("status");
+    const submitBtn = document.getElementById("submit-btn");
+    const evaluateBtn = document.getElementById("evaluate-btn");
+    const resetBtn = document.getElementById("reset-btn");
+    const clearBtn = document.getElementById("clear-btn");
+    const outputEl = document.getElementById("output");
+
+    const EMPTY_OUTPUT = "Evaluate your code to see the output here.";
+
+    snippets.forEach(function (s) {
+        originals[s.langSlug] = s.code;
+        const opt = document.createElement("option");
+        opt.value = s.langSlug;
+        opt.textContent = s.lang;
+        langSelect.appendChild(opt);
+    });
+
+    const editor = CodeMirror.fromTextArea(document.getElementById("code-editor"), {
+        lineNumbers: true,
+        indentUnit: 4,
+        tabSize: 4,
+        indentWithTabs: false,
+        matchBrackets: true,
+        autoCloseBrackets: true,
+        styleActiveLine: true,
+        extraKeys: {
+            Tab: function (cm) {
+                cm.somethingSelected() ? cm.indentSelection("add") : cm.replaceSelection("    ", "end");
+            }
+        }
+    });
+
+    let current = null;
+
+    function setStatus(message, type) {
+        statusEl.textContent = message || "";
+        statusEl.className = "status" + (type ? " is-" + type : "");
+    }
+
+    function setOutput(text, state) {
+        outputEl.textContent = text;
+        outputEl.className = "output-body" + (state ? " is-" + state : "");
+    }
+
+    function setBusy(busy) {
+        submitBtn.disabled = busy;
+        evaluateBtn.disabled = busy;
+    }
+
+    function formatResponse(raw) {
+        try {
+            const data = JSON.parse(raw);
+            return typeof data === "string" ? data : JSON.stringify(data, null, 2);
+        } catch (e) {
+            return raw;
+        }
+    }
+
+    function loadLanguage(slug) {
+        if (current) drafts[current] = editor.getValue();
+        current = slug;
+        editor.setOption("mode", MODES[slug] || "text/plain");
+        editor.setValue(drafts[slug] !== undefined ? drafts[slug] : (originals[slug] || ""));
+        editor.clearHistory();
+        setStatus("");
+    }
+
+    langSelect.addEventListener("change", function () { loadLanguage(langSelect.value); });
+
+    resetBtn.addEventListener("click", function () {
+        if (!current) return;
+        delete drafts[current];
+        editor.setValue(originals[current] || "");
+        setStatus("");
+    });
+
+    clearBtn.addEventListener("click", function () { setOutput(EMPTY_OUTPUT, "empty"); });
+
+
+     // Evaluate: fills the hidden form with the current editor state and posts it
+    const evalForm = document.getElementById("eval-form");
+    const execForm = document.getElementById("exec-form");
+
+    evaluateBtn.addEventListener("click", function () {
+        const code = editor.getValue();
+        if (!code.trim()) { setStatus("Write some code first.", "error"); return; }
+
+        evalForm.elements["title"].value = TITLE;
+        evalForm.elements["content"].value = CONTENT;
+        evalForm.elements["lang"].value = current;
+        evalForm.elements["code"].value = code;
+        evalForm.submit();
+    });
+
+    submitBtn.addEventListener("click", async function () {
+        const code = editor.getValue();
+
+        if (!code.trim()) {
+            setStatus("Write some code first.", "error");
+            return;
+        }
+
+        setBusy(true);
+        setStatus("Executing...");
+        
+        try {
+            const response = await fetch(execForm.action, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": document.querySelector(
+                        "[name=csrfmiddlewaretoken]"
+                    ).value
+                },
+                body: JSON.stringify({
+                    lang: current,
+                    code: code
+                })
+            });
+
+            const data = await response.json();
+            
+            if (data.error) {
+                setOutput(data.error, "error");
+                setStatus("Execution failed", "error");
+            } else if (data.output) {
+                setOutput(data.output, "");
+                setStatus("Executed successfully", "success");
+            } else {
+                setOutput("No output", "");
+                setStatus("Executed successfully", "success");
+            }
+        } catch (error) {
+            setOutput(`Error: ${error.message}`, "error");
+            setStatus("Network error", "error");
+        } finally {
+            setBusy(false);
+        }
+    });
+    if (snippets.length) {
+        const preferred = snippets.some(function (s) { return s.langSlug === "python3"; }) ? "python3" : snippets[0].langSlug;
+        langSelect.value = preferred;
+        loadLanguage(preferred);
+    } else {
+        setStatus("No starter code available for this problem.", "error");
+        setBusy(true);
+    }
+})();
+</script>
+{% endblock %}
